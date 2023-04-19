@@ -1,0 +1,145 @@
+import React, { Component } from "react";
+import "./App.css";
+import Marketplace from "../contracts/Marketplace.json";
+import getWeb3 from "../helpers/getWeb3";
+
+
+const CONTRACT_ADDRESS = require("../contracts/Marketplace.json").networks[5777].address
+const CONTRACT_ABI = require("../contracts/Marketplace.json").abi
+
+class App extends Component {
+  state = { web3: null, accounts: null, contract: null };
+
+  componentDidMount = async () => {
+    try {
+      // Get network provider and web3 instance.
+      const web3 = await getWeb3();
+
+      // Use web3 to get the user's accounts.
+      const accounts = await web3.eth.getAccounts();
+
+      // Get the network ID
+      const networkId = await web3.eth.net.getId();
+      const deployedNetwork = Marketplace.networks[networkId];
+
+      // Check if the Smart Contract is deployed on Network with ID: XY
+      if (deployedNetwork === undefined) {
+        // alert("Por favor, conectate a Ganache para continuar utilizando la aplicacion");
+        this.setState({ web3, accounts, networkId })
+        return;
+      }
+
+      // Create the Smart Contract instance
+      const instance = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
+
+      // Set web3, accounts, and contract to the state, and then proceed with an
+      // example of interacting with the contract's methods.
+
+    // Get Item Count information
+    const itemCount = await instance.methods.itemCount().call();
+    const items = [];
+    for (let i = 1; i <= itemCount; i++) {
+      const item = await instance.methods.getItemDetail(i).call();
+
+      items.push(item);
+    } 
+    console.log(items);
+
+    const arrayDataItems = items.map(item => 
+      <li key={item.id}>
+        <p>ID: {item.id}</p>
+        <p>{item.name}</p>
+        <span>{item.price} WEI</span>
+        <img src={item.imageLink} alt="" width="200"></img>
+        <button id="button-call" onClick={async () => {await this.purchase(item.id, item.price);} }> BUY</button>
+      </li>
+  
+    )
+
+    this.setState({ web3, accounts, networkId, contract: instance , arrayDataItems: arrayDataItems, itemCount: itemCount});
+    this.getPurchases();
+    } catch (error) {
+      // Catch any errors for any of the above operations.
+      alert(
+        `Failed to load web3, accounts, or contract. Check console for details.`,
+      );
+      console.error(error);
+    }
+  };
+
+  componentDidUpdate() {
+    this.handleMetamaskEvent()
+  }
+
+  // --------- METAMASK EVENTS ---------
+  handleMetamaskEvent = async () => {
+    window.ethereum.on('accountsChanged', function (accounts) {
+      // Time to reload your interface with accounts[0]!
+      alert("Incoming event from Metamask: Account changed")
+      window.location.reload()
+    })
+
+    window.ethereum.on('networkChanged', function (networkId) {
+      // Time to reload your interface with the new networkId
+      alert("Incoming event from Metamask: Network changed")
+      window.location.reload()
+    })
+  }
+
+  // -obtengo info de las compras
+  getPurchases = async () => {
+    const { accounts, contract } = this.state;
+
+    // Get the purchases information
+    const purchases = await contract.methods.getAddressPurchases().call({ from: accounts[0] });
+    
+    const arrayDataPurchases = purchases.map(item => 
+      <li key={item}>
+        <p>{item}</p>
+      </li>
+    )
+
+    this.setState({ arrayDataPurchases });
+  }
+
+  // PURCHASE FUNCTION
+  purchase = async (id, amount) => {
+
+    const { accounts, contract } = this.state;
+    // Purchase selectedItem
+    if(accounts != null){
+      await contract.methods.buy(id).send({ from: accounts[0], value: amount});
+      this.getPurchases();
+    }
+  }
+
+  render() {
+
+    if (!this.state.web3) {
+      return <div>Loading Web3, accounts, and contract...</div>;
+    }
+    return (
+      <div className="App">
+        <h1>Welcome to the Marketplace</h1>
+
+        {/* Context Information: Account & Network */}
+        <div className="Context-information">
+          <p> Your address: {this.state.accounts[0]}</p>
+          <p> Network connected: {this.state.networkId}</p>
+          <p> Historico de Items Comprados:</p>
+          <ul>{this.state.arrayDataPurchases}</ul>
+        </div>
+
+        {/* Items information */}
+        <h2 id="inline">Items</h2>
+        {
+            <div className="container">
+              <ul>{this.state.arrayDataItems}</ul>
+            </div>
+        }
+      </div >
+    );
+  }
+}
+
+export default App;
