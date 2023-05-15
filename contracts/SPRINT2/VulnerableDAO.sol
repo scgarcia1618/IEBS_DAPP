@@ -4,6 +4,10 @@ pragma solidity ^0.8.13;
 
 uint constant THRESHOLD = 10;
 
+interface IGetRandomNumber{
+    function getRandomNumber() external view returns (uint8);
+}
+
 /** 
     @notice The contract allows to vote on open disputes. If the dispute is resolved in favor of the buyer,
     the seller have to refund the buyer. If the dispute is resolved in favor of the seller, the sale is closed.
@@ -31,46 +35,38 @@ contract VulnerableDAO {
     // Current disputes, indexed by disputeID
     mapping(uint => Dispute) public disputes;
     // Password to access the key functions
-    string password;
+    //string password;
+
+    address owner;
+    
+    address randomNumberContract;
 
 
     /************************************** Events and modifiers *****************************************************/
 
     event AwardNFT(address user);
 
-
-    /**
-        @notice Check if the caller is authorized to access key features
-        @param magicWord The password to access key features
-     */
-    modifier isAuthorized(string calldata magicWord) {
-        require(
-            keccak256(abi.encodePacked(magicWord)) == keccak256(abi.encodePacked(password)),
+    modifier isAuthorized() {
+        require( msg.sender == owner,
             "Unauthorized");
         _;
     }
 
     /************************************** External  ****************************************************************/ 
 
-    /**
-        @notice Constructor to set the password
-        @param magicWord The password to access key features
-    */
-    constructor(string memory magicWord) {
-        password = magicWord;
+    constructor(address VRF_contract) {
+        owner = msg.sender;
+        randomNumberContract = VRF_contract; // este contrato utiliza VRF de chainlink para obtener un numero random.
     }
 
 
     /**
         @notice Update the contract's configuration details
-        @param magicWord to authenticate as privileged user
-        @param newMagicWord The new password to access key features
+        @param newOwner The new owner address
      */
-    function updateConfig(
-        string calldata magicWord, 
-        string calldata newMagicWord 
-    ) external isAuthorized(magicWord) {
-        password = newMagicWord;
+    function updateConfig(address newOwner
+    ) external isAuthorized {
+        owner = newOwner;
         /*
         * DAO configuration logic goes here
         */
@@ -98,9 +94,8 @@ contract VulnerableDAO {
     function newDispute( 
         uint itemId, 
         string calldata buyerReasoning, 
-        string calldata sellerReasoning,
-        string calldata magicWord
-    ) external isAuthorized(magicWord) returns (uint) {       
+        string calldata sellerReasoning
+    ) external isAuthorized returns (uint) {       
         /*
         * DAO dispute logic goes here
         */
@@ -139,14 +134,7 @@ contract VulnerableDAO {
         @param user The address of the elegible user
      */
     function lotteryNFT(address user) internal {
-        uint randomNumber = uint8(
-            uint256(
-                keccak256(
-                    abi.encodePacked(
-                        blockhash(block.number - 1), 
-                        block.timestamp, 
-                        user
-        ))));
+        uint randomNumber = IGetRandomNumber(randomNumberContract).getRandomNumber();
 
         if (randomNumber < THRESHOLD   ) {
             /*
