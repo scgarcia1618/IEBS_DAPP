@@ -30,7 +30,7 @@ contract VulnerableVault {
     ///@notice Check if the user has enough unlocked funds staked
     modifier enoughStaked(uint amount) {
 		require(
-            (balance[msg.sender] - amount) > 0,
+            balance[msg.sender] >= amount,
             "Amount cannot be unstaked"
         );
 
@@ -90,12 +90,14 @@ contract VulnerableVault {
     function claimRewards() external {	
         uint amount;
 
-        powerseller_nft.call(
+        (bool success, ) = powerseller_nft.call(
             abi.encodeWithSignature(
                 "checkPrivilege(address)",
                 msg.sender
             )
         );
+        require(success, "Addres without privilege");
+
 
         /*
         * Rewards distribution logic goes here
