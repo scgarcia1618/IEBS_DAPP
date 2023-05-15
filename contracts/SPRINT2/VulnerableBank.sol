@@ -27,6 +27,9 @@ contract VulnerableBank {
     ///@notice The block number of the last distribution
     uint latest_distribution;
 
+    //lista de rewards para pagar
+    mapping(address => uint256) public rewardsToPay;
+
 
     /************************************** Events and modifiers *****************************************************/
 
@@ -35,23 +38,31 @@ contract VulnerableBank {
 
     ///@notice  Checks that the caller is the admin
     modifier onlyOwner() {
-        require(tx.origin == admin, "Unauthorized");
+        require(msg.sender == admin, "Unauthorized");
         _;
     }
-
 
     ///@notice Transfers a percentage of the vested tokens to the caller as reward
     ///@param percentage The percentage of the vested tokens to transfer
     modifier returnRewards(uint percentage) {
         // A hundreth of the distributed amount will be rewarded to the distributor as incentive
         uint reward = total_invested * percentage / 10_000;
-
-        (bool success, ) =  payable(msg.sender).call{value: reward}("");
-        require(success, "Reward payment failed");
+        rewardsToPay[msg.sender] = rewardsToPay[msg.sender] + reward;
+        total_invested -= reward;
+        ///////////// NO hacemos esta llamada //////////////////
+        // (bool success, ) =  payable(msg.sender).call{value: reward}("");
+        //require(success, "Reward payment failed");
 
         _;
     }
 
+    function withdraw() external {
+        uint256 rewardToPay = rewardsToPay[msg.sender];
+        require(rewardToPay >= 0, "Account without balance");
+        rewardsToPay[msg.sender] = 0;
+        (bool success, ) =  payable(msg.sender).call{value: rewardToPay}("");
+        require(success, "Withdraw failed");
+    }
 
     /************************************** External  ****************************************************************/ 
  
