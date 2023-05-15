@@ -136,8 +136,8 @@ contract VulnerableShop is Ownable {
         */
 
         // Send the tokens back to the user
-        token.safeTransfer(msg.sender, amount);
-        emit Reimburse(msg.sender);      
+        token.safeTransfer(user, amount);
+        emit Reimburse(user);      
 	}
 
 
@@ -174,7 +174,7 @@ contract VulnerableShop is Ownable {
         @param itemId The ID of the item which sale is being removed
         @param toBePaid If the seller should be paid or not
      */
-    function deleteSale(uint itemId, bool toBePaid) public {
+    function deleteSale(uint itemId, bool toBePaid) internal {
 
         delete offered_items[itemId];
 
