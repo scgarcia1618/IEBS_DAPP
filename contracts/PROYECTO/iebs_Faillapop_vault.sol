@@ -123,7 +123,6 @@ contract FP_Vault is AccessControl {
         emit Unstake(msg.sender, amount);
 	}
 
-
     /**
         @notice Lock funds for selling purposes, the funds are locked until the sale is completed
         @param user The address of the user that is selling

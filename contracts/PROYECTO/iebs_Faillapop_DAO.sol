@@ -243,7 +243,7 @@ contract FP_DAO {
     }      
 
     /************************************** Internal *******************************************************/
-    
+
     /**
         @notice Run a PRNG to award NFT to a user
         @param user The address of the elegible user

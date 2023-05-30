@@ -72,7 +72,6 @@ contract FP_Shop is AccessControl {
         string sellerReasoning;
     }  
 
-
     ///@dev Mapping between the item ID and its Sale struct
     mapping (uint256 => Sale) public offered_items;
     ///@dev The index of the next new Sale
